@@ -1,0 +1,118 @@
+/* Nice looking, simple login page styles - Original Layout with Orange Theme */
+
+.login-page-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #000000;
+  width: 100%;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  padding: 35px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #1e293b;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  border: 1px solid #e2e8f0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 24px;
+  color: #0f172a;
+  text-align: center;
+}
+
+.login-form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.login-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #475569;
+}
+
+.login-input {
+  width: 100%;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.login-input:focus {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #ea580c;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: background-color 0.2s;
+  margin-top: 8px;
+}
+
+.login-btn:hover {
+  background-color: #c2410c;
+}
+
+.login-btn:disabled {
+  background-color: #fdba74;
+  cursor: not-allowed;
+}
+
+.login-error {
+  color: #ef4444;
+  background-color: #fef2f2;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  font-size: 14px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.login-redirect-text {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.login-link {
+  color: #ea580c;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.login-link:hover {
+  color: #c2410c;
+  text-decoration: underline;
+}
