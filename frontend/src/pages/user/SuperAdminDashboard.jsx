@@ -169,6 +169,7 @@ function SuperAdminDashboard() {
 
   // Filters
   const filteredUsers = flatUsers.filter(u => {
+    if (u.role === 'SuperAdmin') return false;
     const matchesSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
                           u.email.toLowerCase().includes(userSearch.toLowerCase());
     const matchesRole = userRoleFilter ? u.role === userRoleFilter : true;
@@ -771,7 +772,6 @@ function SuperAdminDashboard() {
                       onChange={(e) => setUserRoleFilter(e.target.value)}
                     >
                       <option value="">All Roles</option>
-                      <option value="SuperAdmin">SuperAdmin</option>
                       <option value="Admin">Admin</option>
                       <option value="User">User</option>
                     </select>
@@ -823,7 +823,6 @@ function SuperAdminDashboard() {
                                   className="sa-select"
                                   style={{ padding: '6px 12px', fontSize: '13px' }}
                                 >
-                                  <option value="SuperAdmin">SuperAdmin</option>
                                   <option value="Admin">Admin</option>
                                   <option value="User">User</option>
                                 </select>
