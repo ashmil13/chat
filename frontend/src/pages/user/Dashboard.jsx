@@ -23,14 +23,14 @@ function Dashboard() {
     makeGroupAdmin
   } = UserService();
 
-  // Navigation & selection state
+
   const [selectedFriend, setSelectedFriend] = useState(null);
-  const [selectionSource, setSelectionSource] = useState(null); // 'dm' or 'explore'
+  const [selectionSource, setSelectionSource] = useState(null);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editProfileMode, setEditProfileMode] = useState(false);
 
-  // Toast notification state
+
   const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
   const toastTimeoutRef = useRef(null);
 
@@ -53,12 +53,12 @@ function Dashboard() {
   useEffect(() => {
     if (location.state?.toastMessage) {
       showToast(location.state.toastMessage, location.state.toastType || 'info');
-      // clear the state so it doesn't trigger again on refresh
+
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
-  // Theme state (Dark/Light mode)
+
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     return saved !== null ? JSON.parse(saved) : true;
@@ -68,7 +68,7 @@ function Dashboard() {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  // Profile fields state
+
   const [newName, setNewName] = useState(auth.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -76,17 +76,17 @@ function Dashboard() {
   const [settingsError, setSettingsError] = useState('');
   const [settingsSuccess, setSettingsSuccess] = useState('');
 
-  // Data states
+
   const [friends, setFriends] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [inputText, setInputText] = useState('');
-  
-  // Search state
+
+
   const [sidebarSearch, setSidebarSearch] = useState('');
 
-  // Group-specific UI state
+
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -97,7 +97,7 @@ function Dashboard() {
 
   const messagesEndRef = useRef(null);
 
-  // Initial load and polling
+
   useEffect(() => {
     fetchFriends();
     fetchSystemUsers();
@@ -112,7 +112,7 @@ function Dashboard() {
     return () => clearInterval(dataInterval);
   }, []);
 
-  // Poll chat history
+
   useEffect(() => {
     let interval;
     if (selectedFriend) {
@@ -131,21 +131,21 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, [selectedFriend]);
 
-  // Auto scroll
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
   const getUserColor = (userId) => {
     const colors = [
-      '#e57373', // Red
-      '#4db6ac', // Teal
-      '#ffb74d', // Orange/Amber
-      '#64b5f6', // Light Blue
-      '#ba68c8', // Purple
-      '#4dd0e1', // Cyan
-      '#f06292', // Pink
-      '#9575cd'  // Indigo
+      '#e57373',
+      '#4db6ac',
+      '#ffb74d',
+      '#64b5f6',
+      '#ba68c8',
+      '#4dd0e1',
+      '#f06292',
+      '#9575cd'
     ];
     if (!userId) return colors[0];
     const idStr = userId.toString();
@@ -163,7 +163,7 @@ function Dashboard() {
       if (response.data && response.data.success) {
         let list = response.data.connections || [];
         if (selectedFriend) {
-          list = list.map(f => 
+          list = list.map(f =>
             f._id === selectedFriend._id ? { ...f, unreadCount: 0 } : f
           );
         }
@@ -190,8 +190,8 @@ function Dashboard() {
       const response = await getGroups();
       if (response.data && response.data.success) {
         setGroups(response.data.groups || []);
-        
-        // Update selectedFriend details if we have it active
+
+
         if (selectedFriend && selectedFriend.isGroup) {
           const activeGroup = response.data.groups.find(g => g._id === selectedFriend._id);
           if (activeGroup) {
@@ -210,8 +210,8 @@ function Dashboard() {
       const response = await getChatHistory(selectedFriend._id);
       if (response.data && response.data.success) {
         setChatMessages(response.data.messages || []);
-        setFriends(prevFriends => 
-          prevFriends.map(f => 
+        setFriends(prevFriends =>
+          prevFriends.map(f =>
             f._id === selectedFriend._id ? { ...f, unreadCount: 0 } : f
           )
         );
@@ -270,7 +270,7 @@ function Dashboard() {
         setSelectedGroupMembers([]);
         setShowCreateGroupModal(false);
         fetchGroups();
-        
+
         const created = response.data.group;
         const groupTarget = {
           _id: created._id,
@@ -301,7 +301,7 @@ function Dashboard() {
       if (response.data && response.data.success) {
         setGroupInfoSuccess('Group name updated successfully!');
         showToast('Group name updated!', 'success');
-        
+
         const updated = response.data.group;
         const updatedGroup = {
           ...selectedFriend,
@@ -325,7 +325,7 @@ function Dashboard() {
       if (response.data && response.data.success) {
         setGroupInfoSuccess('User promoted to Group Admin successfully!');
         showToast('User promoted to Admin!', 'success');
-        
+
         const updated = response.data.group;
         const updatedGroup = {
           ...selectedFriend,
@@ -432,7 +432,7 @@ function Dashboard() {
       if (response.data && response.data.success) {
         setSettingsSuccess('Profile updated successfully');
         showToast('Profile updated successfully!', 'success');
-        
+
         const updatedUser = response.data.data;
         const newAuth = { ...auth, name: updatedUser.name };
         setAuth(newAuth);
@@ -452,20 +452,20 @@ function Dashboard() {
     .filter(friend => friend._id.toString() !== auth.id?.toString())
     .filter(friend => friend.name.toLowerCase().includes(sidebarSearch.toLowerCase()))
     .sort((a, b) => {
-      // 1. Sort by unreadCount > 0
+
       const aHasUnread = (a.unreadCount || 0) > 0;
       const bHasUnread = (b.unreadCount || 0) > 0;
       if (aHasUnread && !bHasUnread) return -1;
       if (!aHasUnread && bHasUnread) return 1;
 
-      // 2. Sort by lastMessageAt (most recent first)
+
       if (a.lastMessageAt && b.lastMessageAt) {
         return new Date(b.lastMessageAt) - new Date(a.lastMessageAt);
       }
       if (a.lastMessageAt && !b.lastMessageAt) return -1;
       if (!a.lastMessageAt && b.lastMessageAt) return 1;
 
-      // 3. Alphabetical fallback
+
       return a.name.localeCompare(b.name);
     });
 
@@ -518,15 +518,15 @@ function Dashboard() {
   return (
     <div className={`telegram-workspace ${darkMode ? '' : 'light-theme'} ${selectedFriend ? 'chat-active' : ''} ${showSettingsModal ? 'profile-active' : ''}`}>
       <div className="telegram-container">
-        
-        {/* Left Sidebar */}
+
+
         <aside className="telegram-sidebar">
-          
-          {/* Header Row: Menu Icon, App Title, and Logout */}
+
+
           <div className="tg-sidebar-header">
-            <button 
-              className="tg-menu-btn" 
-              title="Settings" 
+            <button
+              className="tg-menu-btn"
+              title="Settings"
               onClick={() => {
                 setSettingsError('');
                 setSettingsSuccess('');
@@ -539,9 +539,9 @@ function Dashboard() {
             </button>
             <h1 className="tg-brand-name">chating</h1>
 
-            {/* Theme Toggle Button */}
-            <button 
-              className="tg-theme-toggle-header-btn" 
+
+            <button
+              className="tg-theme-toggle-header-btn"
               title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               onClick={() => setDarkMode(!darkMode)}
             >
@@ -556,10 +556,10 @@ function Dashboard() {
               )}
             </button>
 
-            {/* Requests Notification Icon Button */}
-            <button 
-              className="tg-requests-btn" 
-              title="Connection Requests" 
+
+            <button
+              className="tg-requests-btn"
+              title="Connection Requests"
               onClick={() => setShowRequestsModal(true)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -579,20 +579,20 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Search bar */}
+
           <div className="tg-search-bar">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="tg-search-icon">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.637z" />
             </svg>
-            <input 
-              type="text" 
-              placeholder="Search contacts..." 
+            <input
+              type="text"
+              placeholder="Search contacts..."
               value={sidebarSearch}
               onChange={(e) => setSidebarSearch(e.target.value)}
             />
           </div>
 
-          {/* Stories row under search (matches attached mobile design mockup) */}
+
           <div className="tg-stories-row">
             <div className="tg-story-item self">
               <div className="tg-story-avatar add">
@@ -614,15 +614,15 @@ function Dashboard() {
             })}
           </div>
 
-          {/* Scrollable list content */}
+
           <div className="tg-sidebar-content">
-            
-            {/* Groups Section */}
+
+
             <div className="tg-section">
               <div className="tg-section-header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '12px', marginBottom: '8px' }}>
                 <span className="tg-section-header" style={{ margin: 0 }}>Groups</span>
-                <button 
-                  className="tg-create-group-btn" 
+                <button
+                  className="tg-create-group-btn"
                   onClick={() => {
                     setNewGroupName('');
                     setSelectedGroupMembers([]);
@@ -642,7 +642,7 @@ function Dashboard() {
                     const isSelected = selectedFriend?._id === group._id && selectedFriend?.isGroup;
                     const initials = group.name ? group.name.charAt(0).toUpperCase() : 'G';
                     return (
-                      <li 
+                      <li
                         key={group._id}
                         className={`tg-list-item ${isSelected ? 'active' : ''}`}
                         onClick={() => {
@@ -663,7 +663,7 @@ function Dashboard() {
                           </div>
                           <div className="tg-item-row">
                             <span className="tg-item-snippet">
-                              {group.lastMessageText 
+                              {group.lastMessageText
                                 ? `${group.lastMessageSender?.name || 'User'}: ${group.lastMessageText}`
                                 : 'No messages yet'}
                             </span>
@@ -676,7 +676,7 @@ function Dashboard() {
               </ul>
             </div>
 
-            {/* Direct Messages (Connected Users) */}
+
             <div className="tg-section">
               <span className="tg-section-header">Direct Messages</span>
               <ul className="tg-list">
@@ -689,14 +689,14 @@ function Dashboard() {
                     const isAccepted = friend.connectionStatus === 'accepted';
 
                     return (
-                      <li 
+                      <li
                         key={friend._id}
                         className={`tg-list-item ${isSelected ? 'active' : ''}`}
                         onClick={() => {
                           setSelectedFriend(friend);
                           setSelectionSource('dm');
-                          setFriends(prevFriends => 
-                            prevFriends.map(f => 
+                          setFriends(prevFriends =>
+                            prevFriends.map(f =>
                               f._id === friend._id ? { ...f, unreadCount: 0 } : f
                             )
                           );
@@ -716,17 +716,17 @@ function Dashboard() {
                           <div className="tg-item-row">
                             <span className="tg-item-title">{friend.name}</span>
                             <span className="tg-item-time">
-                              {isAccepted 
-                                ? (friend.lastMessageAt ? formatTime(friend.lastMessageAt) : 'online') 
+                              {isAccepted
+                                ? (friend.lastMessageAt ? formatTime(friend.lastMessageAt) : 'online')
                                 : 'pending'}
                             </span>
                           </div>
                           <div className="tg-item-row">
                             <span className="tg-item-snippet">
-                              {isAccepted 
-                                ? (friend.lastMessageText 
+                              {isAccepted
+                                ? (friend.lastMessageText
                                     ? `${friend.lastMessageSender?.toString() === auth.id?.toString() ? 'You: ' : ''}${friend.lastMessageText}`
-                                    : friend.email) 
+                                    : friend.email)
                                 : (friend.connectionStatus === 'pending_sent' ? 'Request Sent' : 'Wants to connect')}
                             </span>
                             {friend.connectionStatus === 'pending_received' && (
@@ -744,7 +744,7 @@ function Dashboard() {
               </ul>
             </div>
 
-            {/* Explore Users section */}
+
             <div className="tg-section">
               <span className="tg-section-header">Explore Users</span>
               <ul className="tg-list">
@@ -756,8 +756,8 @@ function Dashboard() {
                     const isSelected = selectedFriend?._id === user._id && selectionSource === 'explore';
 
                     return (
-                      <li 
-                        key={user._id} 
+                      <li
+                        key={user._id}
                         className={`tg-list-item explore ${isSelected ? 'active' : ''}`}
                         onClick={() => {
                           setSelectedFriend(user);
@@ -772,16 +772,16 @@ function Dashboard() {
                           </div>
                           <div className="tg-item-row">
                             <span className="tg-item-snippet">{user.email}</span>
-                            
-                            {/* Connection action triggers */}
+
+
                             <div className="tg-action-container">
                               {user.connectionStatus === 'none' && (
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleSendRequest(user._id);
-                                  }} 
-                                  className="tg-action-btn add-dm" 
+                                  }}
+                                  className="tg-action-btn add-dm"
                                   title="Add to Direct Messages"
                                 >
                                   Add
@@ -809,7 +809,7 @@ function Dashboard() {
 
           </div>
 
-          {/* Logged in User Profile Info footer */}
+
           <div className="tg-sidebar-footer">
             <div className="tg-footer-avatar">
               {auth.image ? <img src={auth.image} alt={auth.name} /> : (auth.name ? auth.name.charAt(0).toUpperCase() : 'U')}
@@ -827,14 +827,14 @@ function Dashboard() {
 
         </aside>
 
-        {/* Right Chat Panel */}
+
         <main className="telegram-chat-panel">
-          
-          {/* Chat Header */}
+
+
           <header className="tg-chat-header">
             {selectedFriend && (
-              <button 
-                className="tg-back-btn" 
+              <button
+                className="tg-back-btn"
                 onClick={() => { setSelectedFriend(null); setSelectionSource(null); }}
                 title="Back to Chats"
               >
@@ -873,8 +873,8 @@ function Dashboard() {
                     )}
                   </h2>
                   <span className="tg-chat-status">
-                    {selectedFriend.isGroup 
-                      ? `${selectedFriend.members?.length || 0} members` 
+                    {selectedFriend.isGroup
+                      ? `${selectedFriend.members?.length || 0} members`
                       : (selectedFriend.connectionStatus === 'accepted' ? formatLastSeen(selectedFriend.lastLogin) : selectedFriend.role)}
                   </span>
                 </>
@@ -884,9 +884,9 @@ function Dashboard() {
             </div>
           </header>
 
-          {/* Message List */}
+
           <div className="tg-messages-container">
-            {/* Display Real Database Messages */}
+
             {selectedFriend ? (
               selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? (
                 <div className="tg-messages-list">
@@ -905,19 +905,19 @@ function Dashboard() {
                       return (
                         <div key={msg._id} className={`tg-msg-wrapper ${isMe ? 'outgoing' : 'incoming'}`} style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', margin: '6px 0', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                           {!isMe && selectedFriend.isGroup && (
-                            <div 
-                              className="tg-msg-avatar" 
-                              style={{ 
-                                width: '28px', 
-                                height: '28px', 
-                                borderRadius: '50%', 
-                                backgroundColor: userColor, 
-                                color: '#fff', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                fontSize: '11px', 
-                                fontWeight: 'bold', 
+                            <div
+                              className="tg-msg-avatar"
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                backgroundColor: userColor,
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
                                 flexShrink: 0,
                                 marginBottom: '2px',
                                 boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
@@ -929,8 +929,8 @@ function Dashboard() {
                           )}
                           <div className={`tg-msg-bubble ${isMe ? 'outgoing' : 'incoming'}`} style={{ margin: 0 }}>
                             {!isMe && (
-                              <span 
-                                className="tg-msg-author" 
+                              <span
+                                className="tg-msg-author"
                                 style={{ color: userColor, fontWeight: '700', fontSize: '12.5px', display: 'block', marginBottom: '3px' }}
                               >
                                 {senderName}
@@ -962,15 +962,15 @@ function Dashboard() {
                   <div className="tg-tip-bubble" style={{ textAlign: 'center' }}>
                     <p><strong>{selectedFriend.name}</strong> sent you a connection request.</p>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
-                      <button 
-                        onClick={() => handleAcceptRequest(selectedFriend._id)} 
-                        className="tg-action-btn accept" 
+                      <button
+                        onClick={() => handleAcceptRequest(selectedFriend._id)}
+                        className="tg-action-btn accept"
                         style={{ padding: '6px 14px', fontSize: '12px' }}
                       >
                         Accept
                       </button>
-                      <button 
-                        onClick={() => handleRejectRequest(selectedFriend._id)} 
+                      <button
+                        onClick={() => handleRejectRequest(selectedFriend._id)}
                         className="tg-action-btn reject"
                         style={{ padding: '6px 14px', fontSize: '12px', marginLeft: 0 }}
                       >
@@ -980,15 +980,15 @@ function Dashboard() {
                   </div>
                 </div>
               ) : (
-                /* Status is 'none' */
+
                 <div className="tg-empty-workspace">
                   <div className="tg-tip-bubble" style={{ textAlign: 'center' }}>
                     <p>You are not connected with <strong>{selectedFriend.name}</strong>.</p>
                     <p style={{ fontSize: '12.5px', marginTop: '6px', color: '#a8c2dc', marginBottom: '12px' }}>
                       Send a connection request to start chatting with them.
                     </p>
-                    <button 
-                      onClick={() => handleSendRequest(selectedFriend._id)} 
+                    <button
+                      onClick={() => handleSendRequest(selectedFriend._id)}
                       className="tg-action-btn add"
                       style={{ padding: '6px 16px', fontSize: '12.5px' }}
                     >
@@ -1006,7 +1006,7 @@ function Dashboard() {
             )}
           </div>
 
-          {/* Chat Footer Input */}
+
           <footer className="tg-chat-footer">
             <form onSubmit={handleSendMessage} className="tg-input-form">
               <button type="button" className="tg-input-icon" title="Attachment">
@@ -1015,13 +1015,13 @@ function Dashboard() {
                 </svg>
               </button>
 
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={
-                  selectedFriend 
-                    ? (selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? "Write a message..." : "Waiting for connection...") 
+                  selectedFriend
+                    ? (selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? "Write a message..." : "Waiting for connection...")
                     : "Write a message..."
                 }
                 disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted')}
@@ -1044,13 +1044,13 @@ function Dashboard() {
 
         </main>
 
-        {/* Right Settings/Profile Sidebar (Third Column) */}
+
         <aside className={`telegram-profile-sidebar ${showSettingsModal ? 'open' : ''}`}>
           <div className="tg-profile-header">
             <h2 className="tg-profile-title">Profile</h2>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className="tg-theme-toggle-btn" 
+              <button
+                className="tg-theme-toggle-btn"
                 onClick={() => setDarkMode(!darkMode)}
                 title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
@@ -1073,7 +1073,7 @@ function Dashboard() {
           </div>
 
           <div className="tg-profile-body">
-            {/* User Profile Card */}
+
             <div className="tg-profile-card">
               <div className="tg-profile-avatar">
                 {auth.name ? auth.name.charAt(0).toUpperCase() : 'U'}
@@ -1083,50 +1083,50 @@ function Dashboard() {
               <span className="tg-profile-online-badge">Online</span>
             </div>
 
-            {/* Account Edit Form */}
+
             <div className="tg-profile-menu">
               <div className="tg-profile-menu-item" onClick={() => setEditProfileMode(!editProfileMode)}>
                 <span className="menu-icon">👤</span>
                 <span className="menu-text">Account Settings</span>
                 <span className="menu-arrow">{editProfileMode ? '▼' : '▶'}</span>
               </div>
-              
+
               {editProfileMode && (
                 <form onSubmit={handleUpdateProfile} className="tg-inline-settings-form">
                   {settingsError && <div className="tg-settings-error">{settingsError}</div>}
                   {settingsSuccess && <div className="tg-settings-success">{settingsSuccess}</div>}
                   <div className="tg-inline-group">
                     <label>Username</label>
-                    <input 
-                      type="text" 
-                      value={newName} 
-                      onChange={(e) => setNewName(e.target.value)} 
-                      required 
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      required
                     />
                   </div>
                   <div className="tg-inline-group">
                     <label>Current Password</label>
-                    <input 
-                      type="password" 
-                      value={currentPassword} 
-                      onChange={(e) => setCurrentPassword(e.target.value)} 
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Enter password to change..."
                     />
                   </div>
                   <div className="tg-inline-group">
                     <label>New Password</label>
-                    <input 
-                      type="password" 
-                      value={newPassword} 
-                      onChange={(e) => setNewPassword(e.target.value)} 
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
                     />
                   </div>
                   <div className="tg-inline-group">
                     <label>Confirm Password</label>
-                    <input 
-                      type="password" 
-                      value={confirmPassword} 
-                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                   </div>
                   <button type="submit" className="tg-inline-save-btn">Save Changes</button>
@@ -1181,7 +1181,7 @@ function Dashboard() {
               <button className="tg-modal-close" onClick={() => setShowRequestsModal(false)}>×</button>
             </div>
             <div className="tg-modal-body" style={{ maxHeight: '450px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Received Requests Section */}
+
               <div className="tg-modal-section">
                 <h4 className="tg-modal-section-title">Received Requests ({incomingRequests.length})</h4>
                 {incomingRequests.length === 0 ? (
@@ -1198,16 +1198,16 @@ function Dashboard() {
                             <span className="tg-request-email">{reqUser.email}</span>
                           </div>
                           <div className="tg-request-actions">
-                            <button 
-                              onClick={() => handleAcceptRequest(reqUser._id)} 
+                            <button
+                              onClick={() => handleAcceptRequest(reqUser._id)}
                               className="tg-action-btn accept"
                               title="Accept"
                               style={{ padding: '4px 10px', fontSize: '11px' }}
                             >
                               ✓ Accept
                             </button>
-                            <button 
-                              onClick={() => handleRejectRequest(reqUser._id)} 
+                            <button
+                              onClick={() => handleRejectRequest(reqUser._id)}
                               className="tg-action-btn reject"
                               title="Remove"
                               style={{ padding: '4px 10px', fontSize: '11px', marginLeft: 0 }}
@@ -1222,7 +1222,7 @@ function Dashboard() {
                 )}
               </div>
 
-              {/* Sent Requests Section */}
+
               <div className="tg-modal-section">
                 <h4 className="tg-modal-section-title">Sent Requests ({sentRequests.length})</h4>
                 {sentRequests.length === 0 ? (
@@ -1239,8 +1239,8 @@ function Dashboard() {
                             <span className="tg-request-email">{reqUser.email}</span>
                           </div>
                           <div className="tg-request-actions">
-                            <button 
-                              onClick={() => handleRejectRequest(reqUser._id)} 
+                            <button
+                              onClick={() => handleRejectRequest(reqUser._id)}
                               className="tg-action-btn cancel"
                               title="Remove Request"
                               style={{ padding: '4px 10px', fontSize: '11px' }}
@@ -1259,7 +1259,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Create Group Modal */}
+
       {showCreateGroupModal && (
         <div className="tg-modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
           <div className="tg-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1271,16 +1271,16 @@ function Dashboard() {
               <div className="tg-modal-body" style={{ maxHeight: '550px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div className="tg-inline-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#cbd5e1' : '#475569' }}>Group Name</label>
-                  <input 
-                    type="text" 
-                    value={newGroupName} 
-                    onChange={(e) => setNewGroupName(e.target.value)} 
-                    required 
+                  <input
+                    type="text"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    required
                     placeholder="Enter group name..."
                     style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: darkMode ? '#1e293b' : '#fff', color: darkMode ? '#fff' : '#000' }}
                   />
                 </div>
-                
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#cbd5e1' : '#475569' }}>Select Members (Connected Friends)</label>
                   {friends.filter(f => f.connectionStatus === 'accepted').length === 0 ? (
@@ -1291,8 +1291,8 @@ function Dashboard() {
                         const isChecked = selectedGroupMembers.includes(friend._id);
                         return (
                           <label key={friend._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               checked={isChecked}
                               onChange={() => {
                                 if (isChecked) {
@@ -1309,7 +1309,7 @@ function Dashboard() {
                     </div>
                   )}
                 </div>
-                
+
                 <button type="submit" className="tg-inline-save-btn" style={{ padding: '10px', backgroundColor: '#ea580c', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>
                   Create Group
                 </button>
@@ -1319,7 +1319,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Group Info Modal */}
+
       {showGroupInfoModal && selectedFriend && selectedFriend.isGroup && (
         <div className="tg-modal-overlay" onClick={() => setShowGroupInfoModal(false)}>
           <div className="tg-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1330,17 +1330,17 @@ function Dashboard() {
             <div className="tg-modal-body" style={{ maxHeight: '500px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
               {groupInfoError && <div className="tg-settings-error">{groupInfoError}</div>}
               {groupInfoSuccess && <div className="tg-settings-success">{groupInfoSuccess}</div>}
-              
-              {/* Group Name Display / Editing */}
+
+
               <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
                 {selectedFriend.admins.some(admin => (admin._id || admin).toString() === auth.id?.toString()) ? (
                   <form onSubmit={handleUpdateGroupName} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#cbd5e1' : '#475569' }}>Change Group Name</label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
-                        type="text" 
-                        value={editGroupNameInput} 
-                        onChange={(e) => setEditGroupNameInput(e.target.value)} 
+                      <input
+                        type="text"
+                        value={editGroupNameInput}
+                        onChange={(e) => setEditGroupNameInput(e.target.value)}
                         required
                         style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: darkMode ? '#1e293b' : '#fff', color: darkMode ? '#fff' : '#000' }}
                       />
@@ -1359,7 +1359,7 @@ function Dashboard() {
                 )}
               </div>
 
-              {/* Group Members List */}
+
               <div>
                 <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: '600', color: darkMode ? '#cbd5e1' : '#475569' }}>
                   Members ({selectedFriend.members?.length || 0})
@@ -1387,10 +1387,10 @@ function Dashboard() {
                             </span>
                           </div>
                         </div>
-                        
-                        {/* Action to make Admin */}
+
+
                         {isCurrentUserGroupAdmin && !isAdmin && !isCreator && (
-                          <button 
+                          <button
                             onClick={() => handleMakeGroupAdmin(memberId)}
                             className="tg-action-btn accept"
                             style={{ padding: '4px 10px', fontSize: '11px' }}
@@ -1409,7 +1409,7 @@ function Dashboard() {
         </div>
       )}
 
-      {/* Toast Notification overlay */}
+
       {toast.show && (
         <div className={`tg-toast-notification ${toast.type}`}>
           {toast.type === 'success' && <span className="toast-icon">✓</span>}

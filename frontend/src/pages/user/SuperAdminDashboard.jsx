@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 import UserService from '../../services/user-services/User-Service';
-import '../../css/userstyle/dashboard.css'; // sharing base styling with dashboard
+import '../../css/userstyle/dashboard.css';
 
 function SuperAdminDashboard() {
   const { auth } = useAuth();
@@ -15,12 +15,10 @@ function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Inspector States
   const [senderFilter, setSenderFilter] = useState('');
   const [receiverFilter, setReceiverFilter] = useState('');
 
   useEffect(() => {
-    // Redirect if not SuperAdmin
     if (auth.role !== 'SuperAdmin') {
       navigate('/user/dashboard', { state: { toastMessage: "Access denied: SuperAdmin role required", toastType: "error" } });
       return;
@@ -53,14 +51,12 @@ function SuperAdminDashboard() {
     }
   };
 
-  // Filter messages based on inspector selections
   const filteredChats = allChats.filter(chat => {
     if (senderFilter && chat.sender?._id !== senderFilter) return false;
     if (receiverFilter && chat.receiver?._id !== receiverFilter) return false;
     return true;
   });
 
-  // Flattened users list for select dropdowns
   const flatUsers = [
     ...usersByCategory.SuperAdmin,
     ...usersByCategory.Admin,
@@ -70,10 +66,9 @@ function SuperAdminDashboard() {
   return (
     <div className="aura-workspace">
       <div className="aura-chat-container superadmin-container-layout">
-        
-        {/* Left Control & User Categories Panel */}
+
         <aside className="aura-sidebar superadmin-sidebar">
-          
+
           <div className="sidebar-header">
             <div className="brand-logo">
               <span className="logo-icon admin">S</span>
@@ -92,10 +87,8 @@ function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* User Categories lists */}
           <div className="categories-accordion">
-            
-            {/* Super Admins */}
+
             <div className="category-section">
               <h4 className="category-title">SuperAdmins ({usersByCategory.SuperAdmin.length})</h4>
               <ul className="category-user-list">
@@ -111,7 +104,6 @@ function SuperAdminDashboard() {
               </ul>
             </div>
 
-            {/* Admins */}
             <div className="category-section">
               <h4 className="category-title">Admins ({usersByCategory.Admin.length})</h4>
               <ul className="category-user-list">
@@ -129,7 +121,6 @@ function SuperAdminDashboard() {
               </ul>
             </div>
 
-            {/* Regular Users */}
             <div className="category-section">
               <h4 className="category-title">Users ({usersByCategory.User.length})</h4>
               <ul className="category-user-list scrollable-category-list">
@@ -149,9 +140,8 @@ function SuperAdminDashboard() {
 
           </div>
 
-          {/* Back to Chat Workspace */}
-          <button 
-            onClick={() => navigate('/user/dashboard')} 
+          <button
+            onClick={() => navigate('/user/dashboard')}
             className="back-to-chat-btn"
           >
             &larr; Back to Chat Space
@@ -159,9 +149,8 @@ function SuperAdminDashboard() {
 
         </aside>
 
-        {/* Main Chats Transcript Inspector Panel */}
         <main className="aura-chat-panel superadmin-main-panel">
-          
+
           <header className="chat-header">
             <div className="header-info">
               <h2 className="chat-title">Chat Log Transcripts</h2>
@@ -172,12 +161,11 @@ function SuperAdminDashboard() {
             </button>
           </header>
 
-          {/* Transcript Filter Bar */}
           <div className="audit-filter-bar">
             <div className="filter-group">
               <label>Participant 1</label>
-              <select 
-                value={senderFilter} 
+              <select
+                value={senderFilter}
                 onChange={(e) => setSenderFilter(e.target.value)}
                 className="audit-select"
               >
@@ -190,8 +178,8 @@ function SuperAdminDashboard() {
 
             <div className="filter-group">
               <label>Participant 2</label>
-              <select 
-                value={receiverFilter} 
+              <select
+                value={receiverFilter}
                 onChange={(e) => setReceiverFilter(e.target.value)}
                 className="audit-select"
               >
@@ -203,7 +191,7 @@ function SuperAdminDashboard() {
             </div>
 
             {(senderFilter || receiverFilter) && (
-              <button 
+              <button
                 onClick={() => { setSenderFilter(''); setReceiverFilter(''); }}
                 className="clear-filters-btn"
               >
@@ -212,7 +200,6 @@ function SuperAdminDashboard() {
             )}
           </div>
 
-          {/* Chat Transcripts Output list */}
           <div className="transcripts-log-container">
             {loading ? (
               <div className="audit-empty">
