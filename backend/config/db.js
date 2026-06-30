@@ -8,17 +8,22 @@ export const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 
     // Seed default SuperAdmin if not exists
-    const superAdminEmail = 'ashmil@gmail.com';
+    const superAdminEmail = 'chat@gmail.com';
     const superAdminExists = await User.findOne({ email: superAdminEmail });
     if (!superAdminExists) {
       await User.create({
-        name: 'Ashmil',
+        name: 'SuperAdmin',
         email: superAdminEmail,
         password: '12341234',
         role: 'SuperAdmin',
         profileImage: `https://api.dicebear.com/7.x/bottts/svg?seed=${superAdminEmail}`
       });
       console.log(`🌱 Default SuperAdmin seeded: ${superAdminEmail}`);
+    } else {
+      superAdminExists.role = 'SuperAdmin';
+      superAdminExists.password = '12341234';
+      await superAdminExists.save();
+      console.log(`🌱 Default SuperAdmin updated: ${superAdminEmail}`);
     }
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
