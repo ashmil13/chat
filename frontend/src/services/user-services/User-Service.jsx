@@ -113,6 +113,31 @@ const UserService = () => {
     return response;
   };
 
+  const updateUserRole = async (userId, role) => {
+    const response = await axiosPrivate.put(`/api/superadmin/users/${userId}/role`, { role });
+    return response;
+  };
+
+  const deleteUserAccount = async (userId) => {
+    const response = await axiosPrivate.delete(`/api/superadmin/users/${userId}`);
+    return response;
+  };
+
+  const getSuperAdminGroups = async () => {
+    const response = await axiosPrivate.get("/api/superadmin/groups");
+    return response;
+  };
+
+  const deleteGroupChat = async (groupId) => {
+    const response = await axiosPrivate.delete(`/api/superadmin/groups/${groupId}`);
+    return response;
+  };
+
+  const deleteChatMessage = async (messageId) => {
+    const response = await axiosPrivate.delete(`/api/superadmin/messages/${messageId}`);
+    return response;
+  };
+
   return {
     postLogin,
     postRegister,
@@ -133,7 +158,12 @@ const UserService = () => {
     makeGroupAdmin,
     updateProfile,
     getSuperAdminChats,
-    getSuperAdminUsers
+    getSuperAdminUsers,
+    updateUserRole,
+    deleteUserAccount,
+    getSuperAdminGroups,
+    deleteGroupChat,
+    deleteChatMessage
   };
 };
 
