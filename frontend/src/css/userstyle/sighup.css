@@ -123,33 +123,4 @@
   text-decoration: underline;
 }
 
-.role-selector-container {
-  display: flex;
-  gap: 10px;
-  margin-top: 5px;
-}
 
-.role-select-btn {
-  flex: 1;
-  padding: 10px;
-  background-color: #f8fafc;
-  color: #64748b;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 13px;
-}
-
-.role-select-btn:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
-}
-
-.role-select-btn.active {
-  background-color: #ea580c;
-  color: #ffffff;
-  border-color: #ea580c;
-  box-shadow: 0 4px 10px rgba(234, 88, 12, 0.2);
-}

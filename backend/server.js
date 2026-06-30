@@ -6,6 +6,7 @@ import userRouter from './routes/userRouter.js';
 import connectionRouter from './routes/connectionRouter.js';
 import messageRouter from './routes/messageRouter.js';
 import superAdminRouter from './routes/superAdminRouter.js';
+import groupRouter from './routes/groupRouter.js';
 
 // Load environmental variables
 dotenv.config();
@@ -35,6 +36,7 @@ app.use('/api', userRouter);
 app.use('/api', connectionRouter);
 app.use('/api', messageRouter);
 app.use('/api', superAdminRouter);
+app.use('/api', groupRouter);
 
 // Root route
 app.get('/', (req, res) => {

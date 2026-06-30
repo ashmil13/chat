@@ -16,7 +16,11 @@ function Dashboard() {
     rejectConnectionRequest,
     sendMessage,
     getChatHistory,
-    updateProfile
+    updateProfile,
+    createGroup,
+    getGroups,
+    updateGroupName,
+    makeGroupAdmin
   } = UserService();
 
   // Navigation & selection state
@@ -75,11 +79,21 @@ function Dashboard() {
   // Data states
   const [friends, setFriends] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   
   // Search state
   const [sidebarSearch, setSidebarSearch] = useState('');
+
+  // Group-specific UI state
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState([]);
+  const [editGroupNameInput, setEditGroupNameInput] = useState('');
+  const [groupInfoError, setGroupInfoError] = useState('');
+  const [groupInfoSuccess, setGroupInfoSuccess] = useState('');
 
   const messagesEndRef = useRef(null);
 
@@ -87,10 +101,12 @@ function Dashboard() {
   useEffect(() => {
     fetchFriends();
     fetchSystemUsers();
+    fetchGroups();
 
     const dataInterval = setInterval(() => {
       fetchFriends();
       fetchSystemUsers();
+      fetchGroups();
     }, 5000);
 
     return () => clearInterval(dataInterval);
@@ -99,9 +115,16 @@ function Dashboard() {
   // Poll chat history
   useEffect(() => {
     let interval;
-    if (selectedFriend && selectedFriend.connectionStatus === 'accepted') {
-      fetchChatHistory();
-      interval = setInterval(fetchChatHistory, 3000);
+    if (selectedFriend) {
+      if (selectedFriend.isGroup) {
+        fetchGroupChatHistory();
+        interval = setInterval(fetchGroupChatHistory, 3000);
+      } else if (selectedFriend.connectionStatus === 'accepted') {
+        fetchChatHistory();
+        interval = setInterval(fetchChatHistory, 3000);
+      } else {
+        setChatMessages([]);
+      }
     } else {
       setChatMessages([]);
     }
@@ -112,6 +135,27 @@ function Dashboard() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  const getUserColor = (userId) => {
+    const colors = [
+      '#e57373', // Red
+      '#4db6ac', // Teal
+      '#ffb74d', // Orange/Amber
+      '#64b5f6', // Light Blue
+      '#ba68c8', // Purple
+      '#4dd0e1', // Cyan
+      '#f06292', // Pink
+      '#9575cd'  // Indigo
+    ];
+    if (!userId) return colors[0];
+    const idStr = userId.toString();
+    let hash = 0;
+    for (let i = 0; i < idStr.length; i++) {
+      hash = idStr.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
 
   const fetchFriends = async () => {
     try {
@@ -141,6 +185,25 @@ function Dashboard() {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const response = await getGroups();
+      if (response.data && response.data.success) {
+        setGroups(response.data.groups || []);
+        
+        // Update selectedFriend details if we have it active
+        if (selectedFriend && selectedFriend.isGroup) {
+          const activeGroup = response.data.groups.find(g => g._id === selectedFriend._id);
+          if (activeGroup) {
+            setSelectedFriend(activeGroup);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch groups:', err);
+    }
+  };
+
   const fetchChatHistory = async () => {
     if (!selectedFriend) return;
     try {
@@ -158,22 +221,122 @@ function Dashboard() {
     }
   };
 
+  const fetchGroupChatHistory = async () => {
+    if (!selectedFriend || !selectedFriend.isGroup) return;
+    try {
+      const response = await getChatHistory(selectedFriend._id, true);
+      if (response.data && response.data.success) {
+        setChatMessages(response.data.messages || []);
+      }
+    } catch (err) {
+      console.error('Failed to load group chat history:', err);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-
-
-
     if (!selectedFriend) return;
 
     try {
-      const response = await sendMessage(selectedFriend._id, inputText.trim());
+      const response = await sendMessage(selectedFriend._id, inputText.trim(), selectedFriend.isGroup);
       if (response.data && response.data.success) {
         setInputText('');
-        fetchChatHistory();
+        if (selectedFriend.isGroup) {
+          fetchGroupChatHistory();
+        } else {
+          fetchChatHistory();
+        }
       }
     } catch (err) {
       showToast(err.response?.data?.error || 'Failed to send message', 'error');
+    }
+  };
+
+  const handleCreateGroup = async (e) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) {
+      showToast('Please enter a group name', 'error');
+      return;
+    }
+    try {
+      const response = await createGroup({
+        name: newGroupName.trim(),
+        members: selectedGroupMembers
+      });
+      if (response.data && response.data.success) {
+        showToast('Group created successfully!', 'success');
+        setNewGroupName('');
+        setSelectedGroupMembers([]);
+        setShowCreateGroupModal(false);
+        fetchGroups();
+        
+        const created = response.data.group;
+        const groupTarget = {
+          _id: created._id,
+          name: created.name,
+          creator: created.creator,
+          admins: created.admins,
+          members: created.members,
+          isGroup: true
+        };
+        setSelectedFriend(groupTarget);
+        setSelectionSource('dm');
+      }
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to create group', 'error');
+    }
+  };
+
+  const handleUpdateGroupName = async (e) => {
+    e.preventDefault();
+    if (!editGroupNameInput.trim()) {
+      setGroupInfoError('Group name cannot be empty');
+      return;
+    }
+    setGroupInfoError('');
+    setGroupInfoSuccess('');
+    try {
+      const response = await updateGroupName(selectedFriend._id, editGroupNameInput.trim());
+      if (response.data && response.data.success) {
+        setGroupInfoSuccess('Group name updated successfully!');
+        showToast('Group name updated!', 'success');
+        
+        const updated = response.data.group;
+        const updatedGroup = {
+          ...selectedFriend,
+          name: updated.name,
+          admins: updated.admins,
+          members: updated.members
+        };
+        setSelectedFriend(updatedGroup);
+        fetchGroups();
+      }
+    } catch (err) {
+      setGroupInfoError(err.response?.data?.error || 'Failed to update group name');
+    }
+  };
+
+  const handleMakeGroupAdmin = async (userId) => {
+    setGroupInfoError('');
+    setGroupInfoSuccess('');
+    try {
+      const response = await makeGroupAdmin(selectedFriend._id, userId);
+      if (response.data && response.data.success) {
+        setGroupInfoSuccess('User promoted to Group Admin successfully!');
+        showToast('User promoted to Admin!', 'success');
+        
+        const updated = response.data.group;
+        const updatedGroup = {
+          ...selectedFriend,
+          admins: updated.admins,
+          members: updated.members
+        };
+        setSelectedFriend(updatedGroup);
+        fetchGroups();
+      }
+    } catch (err) {
+      setGroupInfoError(err.response?.data?.error || 'Failed to promote user');
     }
   };
 
@@ -309,6 +472,17 @@ function Dashboard() {
   const incomingRequests = friends.filter(friend => friend.connectionStatus === 'pending_received');
   const sentRequests = friends.filter(friend => friend.connectionStatus === 'pending_sent');
 
+  const filteredGroups = groups
+    .filter(group => group.name.toLowerCase().includes(sidebarSearch.toLowerCase()))
+    .sort((a, b) => {
+      if (a.lastMessageAt && b.lastMessageAt) {
+        return new Date(b.lastMessageAt) - new Date(a.lastMessageAt);
+      }
+      if (a.lastMessageAt && !b.lastMessageAt) return -1;
+      if (!a.lastMessageAt && b.lastMessageAt) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
   const exploreUsersList = allUsers.filter(user => {
     if (user.role === 'SuperAdmin') return false;
     if (user._id.toString() === auth.id?.toString()) return false;
@@ -443,6 +617,65 @@ function Dashboard() {
           {/* Scrollable list content */}
           <div className="tg-sidebar-content">
             
+            {/* Groups Section */}
+            <div className="tg-section">
+              <div className="tg-section-header-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '12px', marginBottom: '8px' }}>
+                <span className="tg-section-header" style={{ margin: 0 }}>Groups</span>
+                <button 
+                  className="tg-create-group-btn" 
+                  onClick={() => {
+                    setNewGroupName('');
+                    setSelectedGroupMembers([]);
+                    setShowCreateGroupModal(true);
+                  }}
+                  title="Create Group"
+                  style={{ background: 'none', border: 'none', color: '#ea580c', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px', padding: '0 4px' }}
+                >
+                  + Create
+                </button>
+              </div>
+              <ul className="tg-list">
+                {filteredGroups.length === 0 ? (
+                  <p className="tg-no-items">No groups joined yet.</p>
+                ) : (
+                  filteredGroups.map((group) => {
+                    const isSelected = selectedFriend?._id === group._id && selectedFriend?.isGroup;
+                    const initials = group.name ? group.name.charAt(0).toUpperCase() : 'G';
+                    return (
+                      <li 
+                        key={group._id}
+                        className={`tg-list-item ${isSelected ? 'active' : ''}`}
+                        onClick={() => {
+                          setSelectedFriend(group);
+                          setSelectionSource('dm');
+                          setChatMessages([]);
+                        }}
+                      >
+                        <div className="tg-avatar-wrapper">
+                          <div className="tg-item-avatar placeholder" style={{ backgroundColor: '#ea580c', color: '#fff' }}>{initials}</div>
+                        </div>
+                        <div className="tg-item-body">
+                          <div className="tg-item-row">
+                            <span className="tg-item-title">{group.name}</span>
+                            <span className="tg-item-time">
+                              {group.lastMessageAt ? formatTime(group.lastMessageAt) : ''}
+                            </span>
+                          </div>
+                          <div className="tg-item-row">
+                            <span className="tg-item-snippet">
+                              {group.lastMessageText 
+                                ? `${group.lastMessageSender?.name || 'User'}: ${group.lastMessageText}`
+                                : 'No messages yet'}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })
+                )}
+              </ul>
+            </div>
+
             {/* Direct Messages (Connected Users) */}
             <div className="tg-section">
               <span className="tg-section-header">Direct Messages</span>
@@ -623,12 +856,26 @@ function Dashboard() {
               </div>
             )}
 
-            <div className="tg-header-info">
+            <div className="tg-header-info" style={{ cursor: selectedFriend?.isGroup ? 'pointer' : 'default' }} onClick={() => {
+              if (selectedFriend?.isGroup) {
+                setEditGroupNameInput(selectedFriend.name);
+                setGroupInfoError('');
+                setGroupInfoSuccess('');
+                setShowGroupInfoModal(true);
+              }
+            }}>
               {selectedFriend ? (
                 <>
-                  <h2 className="tg-chat-title">{selectedFriend.name}</h2>
+                  <h2 className="tg-chat-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {selectedFriend.name}
+                    {selectedFriend.isGroup && (
+                      <span className="tg-group-info-icon" style={{ fontSize: '14px', color: '#ea580c' }}>ℹ️</span>
+                    )}
+                  </h2>
                   <span className="tg-chat-status">
-                    {selectedFriend.connectionStatus === 'accepted' ? formatLastSeen(selectedFriend.lastLogin) : selectedFriend.role}
+                    {selectedFriend.isGroup 
+                      ? `${selectedFriend.members?.length || 0} members` 
+                      : (selectedFriend.connectionStatus === 'accepted' ? formatLastSeen(selectedFriend.lastLogin) : selectedFriend.role)}
                   </span>
                 </>
               ) : (
@@ -641,7 +888,7 @@ function Dashboard() {
           <div className="tg-messages-container">
             {/* Display Real Database Messages */}
             {selectedFriend ? (
-              selectedFriend.connectionStatus === 'accepted' ? (
+              selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? (
                 <div className="tg-messages-list">
                   {chatMessages.length === 0 ? (
                     <div className="tg-empty-chat-tip">
@@ -649,17 +896,52 @@ function Dashboard() {
                     </div>
                   ) : (
                     chatMessages.map((msg) => {
-                      const isMe = msg.sender && auth.id && msg.sender.toString() === auth.id.toString();
-                      const senderName = isMe ? auth.name : selectedFriend.name;
+                      const isMe = msg.sender && auth.id && (msg.sender._id || msg.sender).toString() === auth.id.toString();
+                      const senderName = isMe ? auth.name : (msg.sender?.name || 'User');
+                      const senderId = msg.sender?._id || msg.sender;
+                      const userColor = getUserColor(senderId);
+                      const initials = senderName ? senderName.charAt(0).toUpperCase() : 'U';
 
                       return (
-                        <div key={msg._id} className={`tg-msg-bubble ${isMe ? 'outgoing' : 'incoming'}`}>
-                          {!isMe && <span className="tg-msg-author text-blue">{senderName}</span>}
-                          <p className="tg-msg-text">{msg.text}</p>
-                          <span className="tg-msg-time">
-                            {formatTime(msg.createdAt)}
-                            {isMe && <span className="ticks"> ✓✓</span>}
-                          </span>
+                        <div key={msg._id} className={`tg-msg-wrapper ${isMe ? 'outgoing' : 'incoming'}`} style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', margin: '6px 0', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                          {!isMe && selectedFriend.isGroup && (
+                            <div 
+                              className="tg-msg-avatar" 
+                              style={{ 
+                                width: '28px', 
+                                height: '28px', 
+                                borderRadius: '50%', 
+                                backgroundColor: userColor, 
+                                color: '#fff', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                fontSize: '11px', 
+                                fontWeight: 'bold', 
+                                flexShrink: 0,
+                                marginBottom: '2px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                              }}
+                              title={senderName}
+                            >
+                              {initials}
+                            </div>
+                          )}
+                          <div className={`tg-msg-bubble ${isMe ? 'outgoing' : 'incoming'}`} style={{ margin: 0 }}>
+                            {!isMe && (
+                              <span 
+                                className="tg-msg-author" 
+                                style={{ color: userColor, fontWeight: '700', fontSize: '12.5px', display: 'block', marginBottom: '3px' }}
+                              >
+                                {senderName}
+                              </span>
+                            )}
+                            <p className="tg-msg-text">{msg.text}</p>
+                            <span className="tg-msg-time">
+                              {formatTime(msg.createdAt)}
+                              {isMe && <span className="ticks"> ✓✓</span>}
+                            </span>
+                          </div>
                         </div>
                       );
                     })
@@ -739,10 +1021,10 @@ function Dashboard() {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={
                   selectedFriend 
-                    ? (selectedFriend.connectionStatus === 'accepted' ? "Write a message..." : "Waiting for connection...") 
+                    ? (selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? "Write a message..." : "Waiting for connection...") 
                     : "Write a message..."
                 }
-                disabled={!selectedFriend || selectedFriend.connectionStatus !== 'accepted'}
+                disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted')}
                 className="tg-text-input"
               />
 
@@ -752,7 +1034,7 @@ function Dashboard() {
                 </svg>
               </button>
 
-              <button type="submit" disabled={!selectedFriend || selectedFriend.connectionStatus !== 'accepted' || !inputText.trim()} className="tg-send-btn" title="Send">
+              <button type="submit" disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted') || !inputText.trim()} className="tg-send-btn" title="Send">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                 </svg>
@@ -971,6 +1253,156 @@ function Dashboard() {
                     })}
                   </ul>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showCreateGroupModal && (
+        <div className="tg-modal-overlay" onClick={() => setShowCreateGroupModal(false)}>
+          <div className="tg-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="tg-modal-header">
+              <h3>Create Group</h3>
+              <button className="tg-modal-close" onClick={() => setShowCreateGroupModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleCreateGroup}>
+              <div className="tg-modal-body" style={{ maxHeight: '550px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div className="tg-inline-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#cbd5e1' : '#475569' }}>Group Name</label>
+                  <input 
+                    type="text" 
+                    value={newGroupName} 
+                    onChange={(e) => setNewGroupName(e.target.value)} 
+                    required 
+                    placeholder="Enter group name..."
+                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: darkMode ? '#1e293b' : '#fff', color: darkMode ? '#fff' : '#000' }}
+                  />
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#cbd5e1' : '#475569' }}>Select Members (Connected Friends)</label>
+                  {friends.filter(f => f.connectionStatus === 'accepted').length === 0 ? (
+                    <p style={{ fontSize: '13px', color: '#94a3b8', margin: '5px 0' }}>No connected friends to add. Connect with users first.</p>
+                  ) : (
+                    <div className="tg-members-checklist" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px' }}>
+                      {friends.filter(f => f.connectionStatus === 'accepted').map(friend => {
+                        const isChecked = selectedGroupMembers.includes(friend._id);
+                        return (
+                          <label key={friend._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={isChecked}
+                              onChange={() => {
+                                if (isChecked) {
+                                  setSelectedGroupMembers(prev => prev.filter(id => id !== friend._id));
+                                } else {
+                                  setSelectedGroupMembers(prev => [...prev, friend._id]);
+                                }
+                              }}
+                            />
+                            {friend.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                
+                <button type="submit" className="tg-inline-save-btn" style={{ padding: '10px', backgroundColor: '#ea580c', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' }}>
+                  Create Group
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Group Info Modal */}
+      {showGroupInfoModal && selectedFriend && selectedFriend.isGroup && (
+        <div className="tg-modal-overlay" onClick={() => setShowGroupInfoModal(false)}>
+          <div className="tg-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="tg-modal-header">
+              <h3>Group Information</h3>
+              <button className="tg-modal-close" onClick={() => setShowGroupInfoModal(false)}>×</button>
+            </div>
+            <div className="tg-modal-body" style={{ maxHeight: '500px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {groupInfoError && <div className="tg-settings-error">{groupInfoError}</div>}
+              {groupInfoSuccess && <div className="tg-settings-success">{groupInfoSuccess}</div>}
+              
+              {/* Group Name Display / Editing */}
+              <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '15px' }}>
+                {selectedFriend.admins.some(admin => (admin._id || admin).toString() === auth.id?.toString()) ? (
+                  <form onSubmit={handleUpdateGroupName} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#cbd5e1' : '#475569' }}>Change Group Name</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        value={editGroupNameInput} 
+                        onChange={(e) => setEditGroupNameInput(e.target.value)} 
+                        required
+                        style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', outline: 'none', backgroundColor: darkMode ? '#1e293b' : '#fff', color: darkMode ? '#fff' : '#000' }}
+                      />
+                      {editGroupNameInput.trim() !== selectedFriend.name && (
+                        <button type="submit" className="tg-action-btn accept" style={{ padding: '8px 14px', borderRadius: '6px', fontSize: '13px' }}>
+                          Save
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                ) : (
+                  <div>
+                    <span style={{ fontSize: '13px', color: '#94a3b8' }}>Group Name</span>
+                    <h4 style={{ margin: '5px 0 0 0', fontSize: '18px', fontWeight: 'bold', color: darkMode ? '#fff' : '#1e293b' }}>{selectedFriend.name}</h4>
+                  </div>
+                )}
+              </div>
+
+              {/* Group Members List */}
+              <div>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: '600', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                  Members ({selectedFriend.members?.length || 0})
+                </h4>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+                  {selectedFriend.members?.map(member => {
+                    const memberId = (member._id || member).toString();
+                    const isCreator = (selectedFriend.creator?._id || selectedFriend.creator)?.toString() === memberId;
+                    const isAdmin = selectedFriend.admins.some(admin => (admin._id || admin).toString() === memberId);
+                    const isCurrentUserGroupAdmin = selectedFriend.admins.some(admin => (admin._id || admin).toString() === auth.id?.toString());
+                    const isMemberMe = memberId === auth.id?.toString();
+
+                    return (
+                      <li key={memberId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div className="tg-item-avatar placeholder" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                            {member.name ? member.name.charAt(0).toUpperCase() : 'U'}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
+                              {member.name} {isMemberMe && '(You)'}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                              {isCreator ? 'Group Creator' : isAdmin ? 'Group Admin' : 'Member'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Action to make Admin */}
+                        {isCurrentUserGroupAdmin && !isAdmin && !isCreator && (
+                          <button 
+                            onClick={() => handleMakeGroupAdmin(memberId)}
+                            className="tg-action-btn accept"
+                            style={{ padding: '4px 10px', fontSize: '11px' }}
+                            title="Give group admin role"
+                          >
+                            + Make Admin
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             </div>
           </div>

@@ -66,13 +66,35 @@ const UserService = () => {
     return response;
   };
 
-  const sendMessage = async (receiverId, text) => {
-    const response = await axiosPrivate.post("/api/messages", { receiverId, text });
+  const sendMessage = async (targetId, text, isGroup = false) => {
+    const payload = isGroup ? { groupId: targetId, text } : { receiverId: targetId, text };
+    const response = await axiosPrivate.post("/api/messages", payload);
     return response;
   };
 
-  const getChatHistory = async (userId) => {
-    const response = await axiosPrivate.get(`/api/messages/${userId}`);
+  const getChatHistory = async (targetId, isGroup = false) => {
+    const url = isGroup ? `/api/messages/group/${targetId}` : `/api/messages/${targetId}`;
+    const response = await axiosPrivate.get(url);
+    return response;
+  };
+
+  const createGroup = async (groupData) => {
+    const response = await axiosPrivate.post("/api/groups", groupData);
+    return response;
+  };
+
+  const getGroups = async () => {
+    const response = await axiosPrivate.get("/api/groups");
+    return response;
+  };
+
+  const updateGroupName = async (groupId, name) => {
+    const response = await axiosPrivate.put(`/api/groups/${groupId}`, { name });
+    return response;
+  };
+
+  const makeGroupAdmin = async (groupId, userId) => {
+    const response = await axiosPrivate.post(`/api/groups/${groupId}/admins`, { userId });
     return response;
   };
 
@@ -105,6 +127,10 @@ const UserService = () => {
     getConnections,
     sendMessage,
     getChatHistory,
+    createGroup,
+    getGroups,
+    updateGroupName,
+    makeGroupAdmin,
     updateProfile,
     getSuperAdminChats,
     getSuperAdminUsers

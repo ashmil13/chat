@@ -79,33 +79,6 @@ function Signup() {
               placeholder="name@example.com"
             />
           </div>
-          
-          <div className="signup-form-group">
-            <label className="signup-label">Account Category</label>
-            <div className="role-selector-container">
-              <button 
-                type="button" 
-                onClick={() => setRole('User')} 
-                className={`role-select-btn ${role === 'User' ? 'active' : ''}`}
-              >
-                User
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setRole('Admin')} 
-                className={`role-select-btn ${role === 'Admin' ? 'active' : ''}`}
-              >
-                Admin
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setRole('SuperAdmin')} 
-                className={`role-select-btn ${role === 'SuperAdmin' ? 'active' : ''}`}
-              >
-                SuperAdmin
-              </button>
-            </div>
-          </div>
 
           <div className="signup-form-group">
             <label className="signup-label">Password</label>
