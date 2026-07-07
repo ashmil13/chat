@@ -8,6 +8,7 @@ function Signup() {
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('User'); // default role
@@ -20,6 +21,11 @@ function Signup() {
     setError('');
     setSuccess('');
 
+    if (phoneNumber.length !== 10) {
+      setError("Phone number must be exactly 10 digits");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -28,13 +34,14 @@ function Signup() {
     setLoading(true);
 
     try {
-      const response = await postRegister({ name, email, password, role });
+      const response = await postRegister({ name, email, phoneNumber, password, role });
       const data = response.data;
       
       if (data && data.success) {
         setSuccess("Registration successful! You can now log in.");
         setName('');
         setEmail('');
+        setPhoneNumber('');
         setPassword('');
         setConfirmPassword('');
         setRole('User');
@@ -77,6 +84,20 @@ function Signup() {
               onChange={(e) => setEmail(e.target.value)} 
               className="signup-input"
               placeholder="name@example.com"
+            />
+          </div>
+
+          <div className="signup-form-group">
+            <label className="signup-label">Phone Number (10 digits)</label>
+            <input 
+              type="tel" 
+              required 
+              pattern="[0-9]{10}"
+              maxLength="10"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+              className="signup-input"
+              placeholder="e.g. 9876543210"
             />
           </div>
 

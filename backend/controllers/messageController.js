@@ -7,11 +7,11 @@ import Group from '../models/group.js';
 // @access  Private
 export const sendMessage = async (req, res, next) => {
   try {
-    const { receiverId, groupId, text } = req.body;
+    const { receiverId, groupId, text, fileUrl, fileType, fileName } = req.body;
     const senderId = req.user.id;
 
-    if (!text || !text.trim()) {
-      return res.status(400).json({ success: false, error: 'Please provide message text' });
+    if ((!text || !text.trim()) && !fileUrl) {
+      return res.status(400).json({ success: false, error: 'Please provide message text or a file attachment' });
     }
 
     if (groupId) {
@@ -30,7 +30,10 @@ export const sendMessage = async (req, res, next) => {
       const message = await Message.create({
         sender: senderId,
         group: groupId,
-        text: text.trim()
+        text: (text || '').trim(),
+        fileUrl: fileUrl || '',
+        fileType: fileType || '',
+        fileName: fileName || ''
       });
 
       const populatedMessage = await Message.findById(message._id)
@@ -54,7 +57,10 @@ export const sendMessage = async (req, res, next) => {
       const message = await Message.create({
         sender: senderId,
         receiver: receiverId,
-        text: text.trim()
+        text: (text || '').trim(),
+        fileUrl: fileUrl || '',
+        fileType: fileType || '',
+        fileName: fileName || ''
       });
 
       const populatedMessage = await Message.findById(message._id)

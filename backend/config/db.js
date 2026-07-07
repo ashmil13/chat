@@ -15,6 +15,7 @@ export const connectDB = async () => {
         name: 'SuperAdmin',
         email: superAdminEmail,
         password: '12341234',
+        phoneNumber: '1000000000',
         role: 'SuperAdmin',
         profileImage: `https://api.dicebear.com/7.x/bottts/svg?seed=${superAdminEmail}`
       });
@@ -22,6 +23,9 @@ export const connectDB = async () => {
     } else {
       superAdminExists.role = 'SuperAdmin';
       superAdminExists.password = '12341234';
+      if (!superAdminExists.phoneNumber || superAdminExists.phoneNumber.length !== 10) {
+        superAdminExists.phoneNumber = '1000000000';
+      }
       await superAdminExists.save();
       console.log(`🌱 Default SuperAdmin updated: ${superAdminEmail}`);
     }

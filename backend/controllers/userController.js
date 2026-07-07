@@ -13,12 +13,22 @@ const generateToken = (id) => {
 // @access  Public
 export const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, phoneNumber, role } = req.body;
 
-    // Check if user already exists
+    if (!phoneNumber) {
+      return res.status(400).json({ success: false, error: 'Please add a phone number' });
+    }
+
+    // Check if user already exists (by email)
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ success: false, error: 'User already exists' });
+      return res.status(400).json({ success: false, error: 'User already exists with this email' });
+    }
+
+    // Check if phone number is already registered
+    const phoneExists = await User.findOne({ phoneNumber });
+    if (phoneExists) {
+      return res.status(400).json({ success: false, error: 'Phone number already registered' });
     }
 
     // Create user
@@ -26,6 +36,7 @@ export const registerUser = async (req, res, next) => {
       name,
       email,
       password,
+      phoneNumber,
       role: role || 'User',
       profileImage: `https://api.dicebear.com/7.x/bottts/svg?seed=${email}`
     });
@@ -36,6 +47,7 @@ export const registerUser = async (req, res, next) => {
       accessToken: generateToken(user._id),
       userId: user._id,
       name: user.name,
+      phoneNumber: user.phoneNumber,
       role: user.role,
       profileImage: user.profileImage
     });
@@ -75,6 +87,7 @@ export const loginUser = async (req, res, next) => {
       accessToken: generateToken(user._id),
       userId: user._id,
       name: user.name,
+      phoneNumber: user.phoneNumber,
       role: user.role,
       profileImage: user.profileImage
     });
@@ -106,7 +119,7 @@ export const getUserProfile = async (req, res, next) => {
 // @access  Private
 export const updateUserProfile = async (req, res, next) => {
   try {
-    const { name, currentPassword, newPassword } = req.body;
+    const { name, phoneNumber, currentPassword, newPassword } = req.body;
 
     const user = await User.findById(req.user.id).select('+password');
     if (!user) {
@@ -115,6 +128,14 @@ export const updateUserProfile = async (req, res, next) => {
 
     if (name) {
       user.name = name;
+    }
+
+    if (phoneNumber && phoneNumber !== user.phoneNumber) {
+      const phoneExists = await User.findOne({ phoneNumber });
+      if (phoneExists) {
+        return res.status(400).json({ success: false, error: 'Phone number already in use by another user' });
+      }
+      user.phoneNumber = phoneNumber;
     }
 
     if (currentPassword && newPassword) {
@@ -139,6 +160,7 @@ export const updateUserProfile = async (req, res, next) => {
         userId: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber,
         role: user.role,
         profileImage: user.profileImage
       }

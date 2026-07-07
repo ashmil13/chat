@@ -165,3 +165,97 @@ export const makeGroupAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Remove a member from the group
+// @route   DELETE /api/groups/:id/members/:userId
+// @access  Private
+export const removeGroupMember = async (req, res, next) => {
+  try {
+    const groupId = req.params.id;
+    const targetUserId = req.params.userId;
+    const currentUserId = req.user.id;
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, error: 'Group not found' });
+    }
+
+    // Verify current user is admin of the group
+    const isCurrentAdmin = group.admins.some(adminId => adminId.toString() === currentUserId.toString());
+    if (!isCurrentAdmin) {
+      return res.status(403).json({ success: false, error: 'Only group admins can remove members' });
+    }
+
+    // Creator cannot be removed
+    if (group.creator.toString() === targetUserId.toString()) {
+      return res.status(400).json({ success: false, error: 'The group creator cannot be removed' });
+    }
+
+    // Check if target user is actually in the group
+    const isMember = group.members.some(memberId => memberId.toString() === targetUserId.toString());
+    if (!isMember) {
+      return res.status(400).json({ success: false, error: 'User is not a member of this group' });
+    }
+
+    // Remove from members and admins
+    group.members = group.members.filter(memberId => memberId.toString() !== targetUserId.toString());
+    group.admins = group.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
+
+    await group.save();
+
+    const populatedGroup = await Group.findById(group._id)
+      .populate('members', 'name email profileImage role')
+      .populate('admins', 'name email profileImage role')
+      .populate('creator', 'name email profileImage role');
+
+    res.status(200).json({ success: true, group: populatedGroup });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Add member(s) to a group
+// @route   POST /api/groups/:id/members
+// @access  Private
+export const addGroupMembers = async (req, res, next) => {
+  try {
+    const groupId = req.params.id;
+    const { userId } = req.body;
+    const currentUserId = req.user.id;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'Please provide a userId to add' });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, error: 'Group not found' });
+    }
+
+    // Verify current user is admin of the group
+    const isCurrentAdmin = group.admins.some(adminId => adminId.toString() === currentUserId.toString());
+    if (!isCurrentAdmin) {
+      return res.status(403).json({ success: false, error: 'Only group admins can add members' });
+    }
+
+    // Check if target user is already a member
+    const isAlreadyMember = group.members.some(memberId => memberId.toString() === userId.toString());
+    if (isAlreadyMember) {
+      return res.status(400).json({ success: false, error: 'User is already a member of this group' });
+    }
+
+    // Add user to members list
+    group.members.push(userId);
+    await group.save();
+
+    const populatedGroup = await Group.findById(group._id)
+      .populate('members', 'name email profileImage role')
+      .populate('admins', 'name email profileImage role')
+      .populate('creator', 'name email profileImage role');
+
+    res.status(200).json({ success: true, group: populatedGroup });
+  } catch (error) {
+    next(error);
+  }
+};
+

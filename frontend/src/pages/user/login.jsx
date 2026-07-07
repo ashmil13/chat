@@ -28,6 +28,7 @@ function Login() {
         localStorage.setItem("role", data.role || "User");
         localStorage.setItem("userId", data.userId || "");
         localStorage.setItem("name", data.name || "");
+        localStorage.setItem("phoneNumber", data.phoneNumber || "");
         localStorage.setItem("profileImage", data.profileImage || "");
         
         setAuth({
@@ -35,6 +36,7 @@ function Login() {
           role: data.role || "User",
           id: data.userId,
           name: data.name,
+          phoneNumber: data.phoneNumber || "",
           image: data.profileImage
         });
         

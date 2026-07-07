@@ -32,7 +32,7 @@ export const getAllUsersByCategory = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Access denied: SuperAdmin role required' });
     }
 
-    const users = await User.find({}).select('name email role profileImage createdAt');
+    const users = await User.find({}).select('name email role phoneNumber profileImage createdAt');
 
     const groupedUsers = {
       SuperAdmin: [],

@@ -66,8 +66,16 @@ const UserService = () => {
     return response;
   };
 
-  const sendMessage = async (targetId, text, isGroup = false) => {
-    const payload = isGroup ? { groupId: targetId, text } : { receiverId: targetId, text };
+  const sendMessage = async (targetId, text, isGroup = false, fileData = null) => {
+    let payload = isGroup ? { groupId: targetId, text } : { receiverId: targetId, text };
+    if (fileData) {
+      payload = {
+        ...payload,
+        fileUrl: fileData.fileUrl,
+        fileType: fileData.fileType,
+        fileName: fileData.fileName
+      };
+    }
     const response = await axiosPrivate.post("/api/messages", payload);
     return response;
   };
@@ -95,6 +103,16 @@ const UserService = () => {
 
   const makeGroupAdmin = async (groupId, userId) => {
     const response = await axiosPrivate.post(`/api/groups/${groupId}/admins`, { userId });
+    return response;
+  };
+
+  const removeGroupMember = async (groupId, userId) => {
+    const response = await axiosPrivate.delete(`/api/groups/${groupId}/members/${userId}`);
+    return response;
+  };
+
+  const addGroupMembers = async (groupId, userId) => {
+    const response = await axiosPrivate.post(`/api/groups/${groupId}/members`, { userId });
     return response;
   };
 
@@ -156,6 +174,8 @@ const UserService = () => {
     getGroups,
     updateGroupName,
     makeGroupAdmin,
+    removeGroupMember,
+    addGroupMembers,
     updateProfile,
     getSuperAdminChats,
     getSuperAdminUsers,

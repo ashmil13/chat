@@ -20,7 +20,9 @@ function Dashboard() {
     createGroup,
     getGroups,
     updateGroupName,
-    makeGroupAdmin
+    makeGroupAdmin,
+    removeGroupMember,
+    addGroupMembers
   } = UserService();
 
 
@@ -70,6 +72,7 @@ function Dashboard() {
 
 
   const [newName, setNewName] = useState(auth.name || '');
+  const [newPhone, setNewPhone] = useState(auth.phoneNumber || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -96,6 +99,57 @@ function Dashboard() {
   const [groupInfoSuccess, setGroupInfoSuccess] = useState('');
 
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeEmojiTab, setActiveEmojiTab] = useState('Smileys');
+
+  const EMOJIS = {
+    "Smileys": ["😂", "🤣", "😊", "😍", "🥰", "😘", "😜", "😜", "🤔", "🤫", "😎", "😢", "😭", "😡", "😱", "👍", "👎", "❤️", "🔥", "👏", "🙌"],
+    "Animals": ["🐶", "🐱", "🦁", "🐼", "🐻", "🦊", "🐰", "🐒", "🐔", "🦄", "🌲", "🌸", "🌞", "🌙", "☁️", "💧", "⚡", "🍀", "🍁", "🍄"],
+    "Food": ["🍏", "🍌", "🍉", "🍓", "🍇", "🍕", "🍔", "🍟", "🌮", "🍣", "🍦", "🍩", "🍫", "🍬", "🍻", "🍷", "☕", "🥤"],
+    "Travel & Flags": ["✈️", "🚗", "🚲", "🚆", "🚢", "🗺️", "🚀", "🌋", "🏰", "🗼", "🌍", "🏁", "🚩", "🇺🇸", "🇬🇧", "🇨🇦", "🇮🇳", "🇯🇵", "🇪🇺"],
+    "Symbols": ["💡", "🔑", "❤️", "💔", "⭐", "🌟", "✨", "💥", "🌀", "🎵", "🎨", "🎮", "📱", "💻", "💼", "📅", "📌", "🔒", "✅", "❌"]
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      let fileType = 'document';
+      if (file.type.startsWith('image/')) {
+        fileType = 'image';
+      } else if (file.type.startsWith('audio/')) {
+        fileType = 'audio';
+      }
+
+      setSelectedFile({
+        fileUrl: reader.result,
+        fileType,
+        fileName: file.name
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleEmojiClick = (emoji) => {
+    setInputText(prev => prev + emoji);
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setShowEmojiPicker(false);
+    };
+    if (showEmojiPicker) {
+      document.addEventListener('click', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [showEmojiPicker]);
 
 
   useEffect(() => {
@@ -235,13 +289,20 @@ function Dashboard() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !selectedFile) return;
     if (!selectedFriend) return;
 
     try {
-      const response = await sendMessage(selectedFriend._id, inputText.trim(), selectedFriend.isGroup);
+      const response = await sendMessage(
+        selectedFriend._id,
+        inputText.trim(),
+        selectedFriend.isGroup,
+        selectedFile
+      );
       if (response.data && response.data.success) {
         setInputText('');
+        setSelectedFile(null);
+        setShowEmojiPicker(false);
         if (selectedFriend.isGroup) {
           fetchGroupChatHistory();
         } else {
@@ -340,6 +401,52 @@ function Dashboard() {
     }
   };
 
+  const handleRemoveMember = async (userId) => {
+    setGroupInfoError('');
+    setGroupInfoSuccess('');
+    try {
+      const response = await removeGroupMember(selectedFriend._id, userId);
+      if (response.data && response.data.success) {
+        setGroupInfoSuccess('User removed from group successfully!');
+        showToast('User removed from group!', 'success');
+
+        const updated = response.data.group;
+        const updatedGroup = {
+          ...selectedFriend,
+          admins: updated.admins,
+          members: updated.members
+        };
+        setSelectedFriend(updatedGroup);
+        fetchGroups();
+      }
+    } catch (err) {
+      setGroupInfoError(err.response?.data?.error || 'Failed to remove user');
+    }
+  };
+
+  const handleAddGroupMember = async (userId) => {
+    setGroupInfoError('');
+    setGroupInfoSuccess('');
+    try {
+      const response = await addGroupMembers(selectedFriend._id, userId);
+      if (response.data && response.data.success) {
+        setGroupInfoSuccess('User added to group successfully!');
+        showToast('User added to group!', 'success');
+
+        const updated = response.data.group;
+        const updatedGroup = {
+          ...selectedFriend,
+          admins: updated.admins,
+          members: updated.members
+        };
+        setSelectedFriend(updatedGroup);
+        fetchGroups();
+      }
+    } catch (err) {
+      setGroupInfoError(err.response?.data?.error || 'Failed to add user to group');
+    }
+  };
+
   const handleSendRequest = async (userId) => {
     try {
       const response = await sendConnectionRequest(userId);
@@ -401,12 +508,20 @@ function Dashboard() {
     if (auth.name) {
       setNewName(auth.name);
     }
+    if (auth.phoneNumber) {
+      setNewPhone(auth.phoneNumber);
+    }
   }, [auth]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setSettingsError('');
     setSettingsSuccess('');
+
+    if (newPhone && newPhone.length !== 10) {
+      setSettingsError('Phone number must be exactly 10 digits');
+      return;
+    }
 
     if (newPassword && newPassword !== confirmPassword) {
       setSettingsError('New passwords do not match');
@@ -417,6 +532,9 @@ function Dashboard() {
       const payload = {};
       if (newName !== auth.name) {
         payload.name = newName;
+      }
+      if (newPhone !== auth.phoneNumber) {
+        payload.phoneNumber = newPhone;
       }
       if (currentPassword && newPassword) {
         payload.currentPassword = currentPassword;
@@ -434,9 +552,14 @@ function Dashboard() {
         showToast('Profile updated successfully!', 'success');
 
         const updatedUser = response.data.data;
-        const newAuth = { ...auth, name: updatedUser.name };
+        const newAuth = { 
+          ...auth, 
+          name: updatedUser.name, 
+          phoneNumber: updatedUser.phoneNumber 
+        };
         setAuth(newAuth);
         localStorage.setItem('name', updatedUser.name);
+        localStorage.setItem('phoneNumber', updatedUser.phoneNumber || '');
 
         setCurrentPassword('');
         setNewPassword('');
@@ -936,7 +1059,45 @@ function Dashboard() {
                                 {senderName}
                               </span>
                             )}
-                            <p className="tg-msg-text">{msg.text}</p>
+                             {msg.fileUrl && (
+                               <div className="tg-msg-attachment">
+                                 {msg.fileType === 'image' && (
+                                   <img
+                                     src={msg.fileUrl}
+                                     alt={msg.fileName || 'Attachment'}
+                                     className="tg-msg-attachment-img"
+                                     onClick={() => window.open(msg.fileUrl, '_blank')}
+                                   />
+                                 )}
+                                 {msg.fileType === 'audio' && (
+                                   <audio
+                                     controls
+                                     src={msg.fileUrl}
+                                     className="tg-msg-attachment-audio"
+                                   />
+                                 )}
+                                 {msg.fileType === 'document' && (
+                                   <div
+                                     className="tg-msg-attachment-doc"
+                                     onClick={() => {
+                                       const link = document.createElement('a');
+                                       link.href = msg.fileUrl;
+                                       link.download = msg.fileName || 'file';
+                                       document.body.appendChild(link);
+                                       link.click();
+                                       document.body.removeChild(link);
+                                     }}
+                                   >
+                                     <span className="tg-msg-attachment-doc-icon">📄</span>
+                                     <div className="tg-msg-attachment-doc-details">
+                                       <span className="tg-msg-attachment-doc-name">{msg.fileName || 'Document'}</span>
+                                       <span className="tg-msg-attachment-doc-action">Click to download</span>
+                                     </div>
+                                   </div>
+                                 )}
+                               </div>
+                             )}
+                             {msg.text && <p className="tg-msg-text">{msg.text}</p>}
                             <span className="tg-msg-time">
                               {formatTime(msg.createdAt)}
                               {isMe && <span className="ticks"> ✓✓</span>}
@@ -1007,40 +1168,105 @@ function Dashboard() {
           </div>
 
 
-          <footer className="tg-chat-footer">
-            <form onSubmit={handleSendMessage} className="tg-input-form">
-              <button type="button" className="tg-input-icon" title="Attachment">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32a1.5 1.5 0 01-2.12-2.121L16.202 7.42" />
-                </svg>
-              </button>
+            {selectedFile && (
+              <div className="tg-attachment-preview-banner">
+                <div className="tg-attachment-preview-info">
+                  {selectedFile.fileType === 'image' ? (
+                    <img src={selectedFile.fileUrl} alt="Preview" className="tg-attachment-preview-thumb" />
+                  ) : (
+                    <div className="tg-attachment-preview-thumb">
+                      {selectedFile.fileType === 'audio' ? '🎵' : '📄'}
+                    </div>
+                  )}
+                  <div className="tg-attachment-preview-details">
+                    <span className="tg-attachment-preview-name">{selectedFile.fileName}</span>
+                    <span className="tg-attachment-preview-type">{selectedFile.fileType} attachment</span>
+                  </div>
+                </div>
+                <button type="button" className="tg-attachment-preview-cancel" onClick={() => setSelectedFile(null)}>
+                  ×
+                </button>
+              </div>
+            )}
 
+            <footer className="tg-chat-footer">
               <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={
-                  selectedFriend
-                    ? (selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? "Write a message..." : "Waiting for connection...")
-                    : "Write a message..."
-                }
-                disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted')}
-                className="tg-text-input"
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
               />
 
-              <button type="button" className="tg-input-icon" title="Emoji">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
-                </svg>
-              </button>
+              {showEmojiPicker && (
+                <div className="tg-emoji-picker-container" onClick={(e) => e.stopPropagation()}>
+                  <div className="tg-emoji-picker-header">
+                    {Object.keys(EMOJIS).map(cat => (
+                       <button
+                         key={cat}
+                         type="button"
+                         className={`tg-emoji-category-tab ${activeEmojiTab === cat ? 'active' : ''}`}
+                         onClick={() => setActiveEmojiTab(cat)}
+                       >
+                         {cat === 'Smileys' ? '😀' : cat === 'Animals' ? '🐱' : cat === 'Food' ? '🍕' : cat === 'Travel & Flags' ? '✈️' : '💡'}
+                       </button>
+                    ))}
+                  </div>
+                  <div className="tg-emoji-picker-scroll">
+                    <div className="tg-emoji-section-title">{activeEmojiTab}</div>
+                    <div className="tg-emoji-grid">
+                      {EMOJIS[activeEmojiTab].map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          className="tg-emoji-btn"
+                          onClick={() => handleEmojiClick(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-              <button type="submit" disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted') || !inputText.trim()} className="tg-send-btn" title="Send">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-              </button>
-            </form>
-          </footer>
+              <form onSubmit={handleSendMessage} className="tg-input-form">
+                <button type="button" className="tg-input-icon" title="Attachment" onClick={() => fileInputRef.current.click()}>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32a1.5 1.5 0 01-2.12-2.121L16.202 7.42" />
+                  </svg>
+                </button>
+
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={
+                    selectedFriend
+                      ? (selectedFriend.isGroup || selectedFriend.connectionStatus === 'accepted' ? "Write a message..." : "Waiting for connection...")
+                      : "Write a message..."
+                  }
+                  disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted')}
+                  className="tg-text-input"
+                />
+
+                <button
+                  type="button"
+                  className="tg-input-icon"
+                  title="Emoji"
+                  onClick={(e) => { e.stopPropagation(); setShowEmojiPicker(!showEmojiPicker); }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                  </svg>
+                </button>
+
+                <button type="submit" disabled={!selectedFriend || (!selectedFriend.isGroup && selectedFriend.connectionStatus !== 'accepted') || (!inputText.trim() && !selectedFile)} className="tg-send-btn" title="Send">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                </button>
+              </form>
+            </footer>
 
         </main>
 
@@ -1079,6 +1305,7 @@ function Dashboard() {
                 {auth.name ? auth.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <h3 className="tg-profile-name">{auth.name || 'User'}</h3>
+              {auth.phoneNumber && <p className="tg-profile-phone">📞 {auth.phoneNumber}</p>}
               <p className="tg-profile-status">Hey there! I am using Chatify</p>
               <span className="tg-profile-online-badge">Online</span>
             </div>
@@ -1102,6 +1329,18 @@ function Dashboard() {
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       required
+                    />
+                  </div>
+                  <div className="tg-inline-group">
+                    <label>Phone Number (10 digits)</label>
+                    <input
+                      type="tel"
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value.replace(/\D/g, ''))}
+                      required
+                      pattern="[0-9]{10}"
+                      maxLength="10"
+                      placeholder="e.g. 9876543210"
                     />
                   </div>
                   <div className="tg-inline-group">
@@ -1389,21 +1628,74 @@ function Dashboard() {
                         </div>
 
 
-                        {isCurrentUserGroupAdmin && !isAdmin && !isCreator && (
-                          <button
-                            onClick={() => handleMakeGroupAdmin(memberId)}
-                            className="tg-action-btn accept"
-                            style={{ padding: '4px 10px', fontSize: '11px' }}
-                            title="Give group admin role"
-                          >
-                            + Make Admin
-                          </button>
+                        {isCurrentUserGroupAdmin && (
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {!isAdmin && !isCreator && (
+                              <button
+                                onClick={() => handleMakeGroupAdmin(memberId)}
+                                className="tg-action-btn accept"
+                                style={{ padding: '4px 10px', fontSize: '11px' }}
+                                title="Give group admin role"
+                              >
+                                + Make Admin
+                              </button>
+                            )}
+                            {!isCreator && !isMemberMe && (
+                              <button
+                                onClick={() => handleRemoveMember(memberId)}
+                                className="tg-action-btn reject"
+                                style={{ padding: '4px 10px', fontSize: '11px', marginLeft: 0 }}
+                                title="Remove from group"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
                         )}
                       </li>
                     );
                   })}
                 </ul>
               </div>
+
+              {selectedFriend.admins.some(admin => (admin._id || admin).toString() === auth.id?.toString()) && (
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '15px', marginTop: '10px' }}>
+                  <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: '600', color: darkMode ? '#cbd5e1' : '#475569' }}>
+                    Add Friends to Group
+                  </h4>
+                  {friends.filter(f => f.connectionStatus === 'accepted' && !selectedFriend.members.some(m => (m._id || m).toString() === f._id.toString())).length === 0 ? (
+                    <p style={{ fontSize: '13px', color: '#94a3b8', margin: '5px 0' }}>All your friends are already in this group.</p>
+                  ) : (
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '180px', overflowY: 'auto' }}>
+                      {friends
+                        .filter(f => f.connectionStatus === 'accepted' && !selectedFriend.members.some(m => (m._id || m).toString() === f._id.toString()))
+                        .map(friend => {
+                          const initials = friend.name ? friend.name.charAt(0).toUpperCase() : 'U';
+                          return (
+                            <li key={friend._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="tg-item-avatar placeholder" style={{ width: '32px', height: '32px', fontSize: '12px' }}>
+                                  {initials}
+                                </div>
+                                <span style={{ fontSize: '14px', fontWeight: '500', color: darkMode ? '#f1f5f9' : '#1e293b' }}>
+                                  {friend.name}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleAddGroupMember(friend._id)}
+                                className="tg-action-btn accept"
+                                style={{ padding: '4px 10px', fontSize: '11px' }}
+                                title="Add to group"
+                              >
+                                + Add
+                              </button>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
